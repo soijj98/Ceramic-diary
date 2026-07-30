@@ -1,78 +1,70 @@
 import * as ImagePicker from "expo-image-picker";
 import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
-import { Piece, Step, StepPhoto, StepWithPhotos, StepType } from "@/types";
+import { Category, Mood, Session, SessionPhoto, SessionWithPhotos } from "@/types";
 
-export async function listPieces(): Promise<Piece[]> {
-  const { data, error } = await supabase
-    .from("pieces")
+export async function listSessions(category?: Category): Promise<Session[]> {
+  let query = supabase
+    .from("sessions")
     .select("*")
     .order("created_at", { ascending: false });
+
+  if (category) {
+    query = query.eq("category", category);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }
 
-export async function createPiece(input: {
-  title: string;
-  clay_type?: string;
-  start_weight_g?: number;
-}): Promise<Piece> {
+export async function listSessionPhotos(
+  sessionIds: string[]
+): Promise<SessionPhoto[]> {
+  if (sessionIds.length === 0) return [];
   const { data, error } = await supabase
-    .from("pieces")
-    .insert(input)
-    .select()
-    .single();
+    .from("session_photos")
+    .select("*")
+    .in("session_id", sessionIds);
   if (error) throw error;
-  return data;
+  return data ?? [];
 }
 
-export async function getPiece(id: string): Promise<Piece> {
+// Convenience helper for screens that want sessions + their photos
+// in one call, e.g. a detail view.
+export async function listSessionsWithPhotos(
+  category?: Category
+): Promise<SessionWithPhotos[]> {
+  const sessions = await listSessions(category);
+  const photos = await listSessionPhotos(sessions.map((s) => s.id));
+  return sessions.map((session) => ({
+    ...session,
+    photos: photos.filter((p) => p.session_id === session.id),
+  }));
+}
+
+export async function getSession(id: string): Promise<SessionWithPhotos> {
   const { data, error } = await supabase
-    .from("pieces")
+    .from("sessions")
     .select("*")
     .eq("id", id)
     .single();
   if (error) throw error;
-  return data;
+  const photos = await listSessionPhotos([id]);
+  return { ...data, photos };
 }
 
-export async function listStepsWithPhotos(
-  pieceId: string
-): Promise<StepWithPhotos[]> {
-  const { data: steps, error } = await supabase
-    .from("steps")
-    .select("*")
-    .eq("piece_id", pieceId)
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  if (!steps || steps.length === 0) return [];
-
-  const { data: photos, error: photosError } = await supabase
-    .from("step_photos")
-    .select("*")
-    .in(
-      "step_id",
-      steps.map((s) => s.id)
-    );
-  if (photosError) throw photosError;
-
-  return steps.map((step) => ({
-    ...step,
-    photos: (photos ?? []).filter((p: StepPhoto) => p.step_id === step.id),
-  }));
-}
-
-export async function createStep(input: {
-  piece_id: string;
-  step_type: StepType;
-  note?: string;
-  weight_g?: number;
-  kiln_temp_c?: number;
-  firing_program?: string;
-  glaze_name?: string;
-  glaze_application_method?: string;
-}): Promise<Step> {
+export async function createSession(input: {
+  title: string;
+  category: Category;
+  clay_body?: string;
+  technique?: string;
+  firing_temp?: string;
+  glaze?: string;
+  mood?: Mood;
+  notes?: string;
+}): Promise<Session> {
   const { data, error } = await supabase
-    .from("steps")
+    .from("sessions")
     .insert(input)
     .select()
     .single();
@@ -81,8 +73,11 @@ export async function createStep(input: {
 }
 
 // Lets the user pick a photo from their library and uploads it to
-// Supabase Storage under the given step, recording it in step_photos.
-export async function pickAndUploadPhoto(stepId: string): Promise<StepPhoto | null> {
+// Supabase Storage under the given session, recording it in
+// session_photos.
+export async function pickAndUploadSessionPhoto(
+  sessionId: string
+): Promise<SessionPhoto | null> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
     throw new Error("Kuvakirjaston käyttöoikeus puuttuu.");
@@ -98,7 +93,7 @@ export async function pickAndUploadPhoto(stepId: string): Promise<StepPhoto | nu
   const response = await fetch(asset.uri);
   const arrayBuffer = await response.arrayBuffer();
   const fileExt = asset.uri.split(".").pop() ?? "jpg";
-  const storagePath = `${stepId}/${Date.now()}.${fileExt}`;
+  const storagePath = `${sessionId}/${Date.now()}.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage
     .from(STORAGE_BUCKET)
@@ -108,8 +103,8 @@ export async function pickAndUploadPhoto(stepId: string): Promise<StepPhoto | nu
   if (uploadError) throw uploadError;
 
   const { data, error } = await supabase
-    .from("step_photos")
-    .insert({ step_id: stepId, storage_path: storagePath })
+    .from("session_photos")
+    .insert({ session_id: sessionId, storage_path: storagePath })
     .select()
     .single();
   if (error) throw error;

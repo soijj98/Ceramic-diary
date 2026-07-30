@@ -1,19 +1,15 @@
 import { useCallback, useState } from "react";
-import { useFocusEffect } from "expo-router";
 import { Image, ScrollView, StyleSheet, Text, View, TouchableOpacity, StatusBar } from "react-native";
-import { listPieces } from "@/lib/data";
+import { useFocusEffect } from "expo-router";
 import { colors, radius, spacing } from "@/constants/theme";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons'; 
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 // siirrä tää missä on navigaatio määritelty
-type RootStackParamList = {
+type RootStackParamList = { 
   "Profile": undefined;
 
 };
-
-type prob = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 
 const COLORS = {
   primary: '#F5F0E6', // Vaalea tausta
@@ -86,9 +82,8 @@ export default function ProfileScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      listPieces()
-        .then((pieces) => setPieceCount(pieces.length))
-        .catch(() => setPieceCount(null));
+      // data loading removed: listPieces not exported from '@/lib/data'
+      setPieceCount(null);
     }, [])
   );
 

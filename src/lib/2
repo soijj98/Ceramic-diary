@@ -1,4 +1,4 @@
-
+cat > /home/claude/ceramics-diary/supabase/schema.sql << 'EOF'
 -- Clay Book schema (v2) — flat session-journal model.
 -- If you already ran the previous schema (pieces/steps/step_photos),
 -- drop those first since this replaces them:
@@ -57,3 +57,5 @@ create policy "public delete sessions" on sessions for delete using (true);
 
 create policy "public read session_photos" on session_photos for select using (true);
 create policy "public write session_photos" on session_photos for insert with check (true);
+EOF
+echo done
