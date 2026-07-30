@@ -2,7 +2,7 @@ import { useState } from "react";
 import { StyleSheet, Text, View, Alert, TextInput, TouchableOpacity } from "react-native";
 
 import { supabase } from "../../src/lib/supabase"; // Tarkista polku oman projektisi mukaan
-import i18n from "../../src/lib/i18n/i18n";
+import i18n from "@/lib/i18n/i18n";
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState("");

@@ -37,6 +37,22 @@ export default function TabsLayout() {
           ),
         }}
       />
+      {/* Piilotetaan kirjautumis- ja rekisteröitymissivut alavalikosta, mutta pidetään reitit auki */}
+      <Tabs.Screen
+        name="login"
+        options={{
+          title: "Kirjaudu sisään",
+          href: null, 
+        }}
+      />
+      <Tabs.Screen
+        name="signup"
+        options={{
+          title: "Luo tunnus",
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
+
