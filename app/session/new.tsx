@@ -21,6 +21,8 @@ export default function NewSessionScreen() {
     year: "numeric",
   });
 
+  //saven paino puuttuu!!!!!!
+
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<Category>("wheel");
   const [clayBody, setClayBody] = useState("");
