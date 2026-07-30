@@ -10,6 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import { ALL_CATEGORIES, Category, CATEGORY_LABELS, Mood } from "@/types";
 import { createSession, pickAndUploadSessionPhoto } from "@/lib/data";
+import * as ImagePicker from "expo-image-picker";
 import { MoodPicker } from "@/components/MoodPicker";
 import { colors, radius, spacing } from "@/constants/theme";
 
@@ -25,16 +26,44 @@ export default function NewSessionScreen() {
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<Category>("wheel");
+  const [isTrimmed, setIsTrimmed] = useState(false);
+
   const [clayBody, setClayBody] = useState("");
   const [technique, setTechnique] = useState("");
+  
+  const [includeBisque, setIncludeBisque] = useState(false);
+  const [bisqueTemp, setBisqueTemp] = useState("");
+  const [bisqueNotes, setBisqueNotes] = useState("");
+
+  const [includeGlaze, setIncludeGlaze] = useState(false);
+  const [glazeName, setGlazeName] = useState("");
+  const [glazeTemp, setGlazeTemp] = useState("");
+  const [glazeNotes, setGlazeNotes] = useState("");
+  
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+
   const [firingTemp, setFiringTemp] = useState("");
   const [glaze, setGlaze] = useState("");
   const [mood, setMood] = useState<Mood | null>(null);
   const [notes, setNotes] = useState("");
+  
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
   const [savedSessionId, setSavedSessionId] = useState<string | null>(null);
   const [photoCount, setPhotoCount] = useState(0);
+
+
+  async function handlePickPhoto() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0].uri) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  }
 
   async function handleSave() {
     if (!title.trim()) {
@@ -49,12 +78,17 @@ export default function NewSessionScreen() {
         category,
         clay_body: clayBody.trim() || undefined,
         technique: technique.trim() || undefined,
-        firing_temp: firingTemp.trim() || undefined,
-        glaze: glaze.trim() || undefined,
+        firing_temp: firingTemp.trim() ? bisqueTemp.trim() || undefined : undefined,
+        glaze: includeGlaze ? glazeName.trim() || undefined : undefined,
         mood: mood ?? undefined,
         notes: notes.trim() || undefined,
       });
-      setSavedSessionId(session.id);
+
+      if (photoUri && session?.id) {
+        await pickAndUploadSessionPhoto(session.id, photoUri);
+      }
+
+      router.replace("/(tabs)");
     } catch (err) {
       setErrorMsg("Tallennus epäonnistui. Yritä uudelleen.");
       console.error(err);
