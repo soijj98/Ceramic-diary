@@ -1,9 +1,12 @@
 import { useCallback, useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, View, TouchableOpacity, StatusBar } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { colors, radius, spacing } from "@/constants/theme";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons'; 
+import { supabase } from "@/lib/supabase";
+import { Background } from "expo-router/build/react-navigation";
+
 
 // siirrä tää missä on navigaatio määritelty
 type RootStackParamList = { 
@@ -21,42 +24,37 @@ const COLORS = {
   border: '#E0E0E0',
 };
 
-const MOCK_DATA = {
-  name: 'Maya Ossi',
-  handle: 'Earthwork Studio • Portland, OR',
-  bio: 'Wheel thrower and glaze nerd. Obsessed with reduction firing and the chaos of ash glazes.',
-  sessions: 3,
-  glazeLogs: 1,
-  topMood: 'Growing',
-  notes: [
-    { category: 'Wheel', value: 1 , max: 1 },
-    { category: 'HandBuilding', value: 1 , max: 1 },
-    { category: 'Glaze', value: 1, max: 1 }
-  ],
-  headerImage: 'https://images.unsplash.com/photo-1565195660138-e1c432f76f28?q=80&w=800',
-  avatarImage: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200',
-  gallery: [
-    'https://images.unsplash.com/photo-1611280104291-38c5e034697a?q=80&w=300',
-    'https://images.unsplash.com/photo-1578749556568-bc5c40e18084?q=80&w=300',
-    'https://images.unsplash.com/photo-1594368918772-0a61da77e07c?q=80&w=300',
-    'https://images.unsplash.com/photo-1612193114931-75332b4a606a?q=80&w=300',
-    'https://images.unsplash.com/photo-1534518634116-4d87951176a4?q=80&w=300',
-    'https://images.unsplash.com/photo-1577153923763-2b042e6fc1ea?q=80&w=300',
-  ],
-  email: 'maya@claystudio.co',
-  memberSince: 2023,
-}
+// const MOCK_DATA = {
+//   name: 'Maya Ossi',
+//   handle: 'Earthwork Studio • Portland, OR',
+//   bio: 'Wheel thrower and glaze nerd. Obsessed with reduction firing and the chaos of ash glazes.',
+//   sessions: 3,
+//   glazeLogs: 1,
+//   topMood: 'Growing',
+//   notes: [
+//     { category: 'Wheel', value: 1 , max: 1 },
+//     { category: 'HandBuilding', value: 1 , max: 1 },
+//     { category: 'Glaze', value: 1, max: 1 }
+//   ],
+//   headerImage: 'https://images.unsplash.com/photo-1565195660138-e1c432f76f28?q=80&w=800',
+//   avatarImage: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200',
+//   gallery: [
+//     'https://images.unsplash.com/photo-1611280104291-38c5e034697a?q=80&w=300',
+//     'https://images.unsplash.com/photo-1578749556568-bc5c40e18084?q=80&w=300',
+//     'https://images.unsplash.com/photo-1594368918772-0a61da77e07c?q=80&w=300',
+//     'https://images.unsplash.com/photo-1612193114931-75332b4a606a?q=80&w=300',
+//     'https://images.unsplash.com/photo-1534518634116-4d87951176a4?q=80&w=300',
+//     'https://images.unsplash.com/photo-1577153923763-2b042e6fc1ea?q=80&w=300',
+//   ],
+//   email: 'maya@claystudio.co',
+//   memberSince: 2023,
+// }
 
 
-const HeaderSection = ({ navigation, imageUrl, avatarUrl }: any) => (
+
+const HeaderSection = ({ imageUrl, avatarUrl }: any) => (
   <View style={styles.headerContainer}>
     <Image source={{ uri: imageUrl }} style={styles.headerImage} resizeMode="cover" />
-    <SafeAreaView style={styles.topBar}>
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Ionicons name="arrow-back" size={24} color="white" />
-        <Text style={styles.backButtonText}>Takaisin</Text>
-      </TouchableOpacity>
-    </SafeAreaView>
     <Image source={{ uri: avatarUrl }} style={styles.avatar} />
   </View>
 );
@@ -78,14 +76,134 @@ const NoteCategory = ({ category, value, max }: any) => (
 )
 
 export default function ProfileScreen() {
-  const [pieceCount, setPieceCount] = useState<number | null>(null);
-
+  const router = useRouter();
+  const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
+  const [userData, setUserData] = useState({
+    name: "Nimetön keraamikko",
+    handle: "Aseta nimimerkki",
+    bio: "Kerro itsestäsi jotain...",
+    sessions: 0,
+    glazeLogs: 0,
+    topMood: "-",
+    notes: [
+      { category: "Wheel", value: 0, max: 1 },
+      { category: "HandBuilding", value: 0, max: 1 },
+      { category: "Glaze", value: 0, max: 1 }
+    ],
+    headerImage: "https://images.unsplash.com/photo-1565195660138-e1c432f76f28?q=80&w=800", // Oletuskuva
+    avatarImage: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200", // Oletuskuva
+    gallery: [] as string[],
+    memberSince: new Date().getFullYear(), 
+  });
+  
   useFocusEffect(
     useCallback(() => {
-      // data loading removed: listPieces not exported from '@/lib/data'
-      setPieceCount(null);
+      checkUserAndLoadData();
     }, [])
   );
+
+  async function checkUserAndLoadData() {
+    setLoading(true);
+    
+    // 1. Tarkistetaan onko käyttäjä kirjautunut
+    const { data: { session } } = await supabase.auth.getSession();
+    setSession(session);
+
+    if (session?.user) {
+      // 2. Haetaan liittymisvuosi Supabasen tiedoista
+      const joinYear = new Date(session.user.created_at).getFullYear();
+
+      // 3. TÄSSÄ HAETAAN OIKEAT TIEDOT TIETOKANNASTA (ESIMERKKI)
+      // Voit myöhemmin korvata nämä oikeilla tietokantakutsuilla (esim. getSessions())
+      // const userSessions = await getMySessions();
+      // const userProfile = await getMyProfile();
+      
+      setUserData((prev) => ({
+        ...prev,
+        memberSince: joinYear,
+        // Kun tietokantakutsut ovat valmiit, aseta oikeat arvot tähän:
+        // name: userProfile.name || prev.name,
+        // bio: userProfile.bio || prev.bio,
+        // sessionsCount: userSessions.length,
+        // gallery: userSessions.map(s => s.photoUri).filter(Boolean),
+      }));
+    }
+    
+    setLoading(false);
+  }
+
+  const HeaderSection = ({ imageUrl, avatarUrl }: any) => (
+  <View style={styles.headerContainer}>
+    <Image source={{ uri: imageUrl }} style={styles.headerImage} resizeMode="cover" />
+    <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+  </View>
+);
+
+const StatBox = ({ number, label, icon }: any) => (
+  <View style={styles.statBox}>
+    {icon ? icon : <Text style={styles.statNumber}>{number}</Text>}
+    <Text style={styles.statLabel}>{label}</Text>
+  </View>
+);
+
+const NoteCategory = ({ category, value, max }: any) => (
+  <View style={styles.noteRow}>
+    <Text style={styles.noteCategory}>{category}</Text>
+    <View style={styles.progressBarBackground}>
+      <View style={[styles.progressBarFill, { width: `${(value / max) * 100}%` }]} />
+    </View>
+  </View>
+)
+
+  async function checkUser() {
+    setLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    setLoading(false);
+  }
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={{color: COLORS.textSecondary}}>Ladataan...</Text>
+      </View>
+    )
+  }
+
+
+ if (!session || !session.user) {
+   return (
+    <SafeAreaView style={styles.centerContainer}>
+       <View style={styles.loggedOutCard}>
+        <Text style={styles.loggedOutEmoji}>🏺</Text>
+         <Text style={styles.loggedOutTitle}>Tervetuloa keramiikkapäiväkirjaan</Text>
+        <Text style={styles.loggedOutText}>
+           Sovellus toimii tällä hetkellä paikallisesti laitteellasi. Voit halutessasi kirjautua sisään tallentaaksesi tiedot pilveen ja synkronoidaksesi ne laitteiden välillä.
+         </Text>
+
+        <TouchableOpacity style={styles.primaryButton}
+           onPress={() => router.push('/login')}
+        >
+           <Text style={styles.primaryButtonText}>Kirjaudu sisään</Text>
+         </TouchableOpacity>
+
+         <TouchableOpacity style={styles.secondaryButton}
+           onPress={() => router.push('/signup')}
+         >
+
+           <Text style={styles.secondaryButtonText}>Luo uusi tunnus </Text>
+        </TouchableOpacity>
+       </View>
+     </SafeAreaView>
+  );
+ }
+
 
   return (
 
@@ -96,54 +214,60 @@ export default function ProfileScreen() {
         <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <HeaderSection
             //navigation={navigation}
-            imageUrl={MOCK_DATA.headerImage}
-            avatarUrl={MOCK_DATA.avatarImage}
+            imageUrl={userData.headerImage}
+            avatarUrl={userData.avatarImage}
           />
 
         <View style={styles.bioSection}>
-          <Text style={styles.name}>{MOCK_DATA.bio}</Text>
-          <Text style={styles.handle}>{MOCK_DATA.handle}</Text>
-          <Text style={styles.bio}>{MOCK_DATA.bio}</Text>
+          <Text style={styles.name}>{userData.bio}</Text>
+          <Text style={styles.handle}>{userData.handle}</Text>
+          <Text style={styles.bio}>{userData.bio}</Text>
         </View>
 
 
         <View style={styles.statsContainer}>
-          <StatBox number={MOCK_DATA.sessions} label="Sessionit" />
-          <StatBox number={MOCK_DATA.glazeLogs} label="Glaze logs" />
+          <StatBox number={userData.sessions} label="Sessionit" />
+          <StatBox number={userData.glazeLogs} label="Glaze logs" />
           
           <StatBox
             label="Top mood"
             icon={<Ionicons name="leaf" size={24} color="green" />}
           />
-          <Text style={styles.moodText}>{MOCK_DATA.topMood}</Text>
+          <Text style={styles.moodText}>{userData.topMood}</Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notes by category</Text>
-          {MOCK_DATA.notes.map((note, index) => (
+          {userData.notes.map((note, index) => (
             <NoteCategory key={index} {...note} />
           ))}
         </View>
           
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Gallery</Text>
-          <View style={styles.galleryGrid}>
-            {MOCK_DATA.gallery.map((uri, index) => (
-              <Image key={index} source={{ uri }} style={styles.galleryImage} />
+          {userData.gallery.length > 0 ? (
+            <View style={styles.galleryGrid}>
+              {userData.gallery.map((uri, index) => (
+                <Image key={index} source={{ uri }} style={styles.galleryImage} />
             ))}
           </View>
+        ) : (
+          <Text style={{ color: COLORS.textSecondary, fontStyle: 'italic' }}>
+            Ei vielä kuvia galleriassa.
+          </Text>
+        )}
       </View>
       
       <View style={styles.footerCard}>
         <View style={styles.footerRow}>
           <Text style={styles.footerLabel}>Email:</Text>
-          <Text style={styles.footerValue}>{MOCK_DATA.email}</Text>
+          <Text style={styles.footerValue}>{session?.user?.email}</Text>
         </View>
         
         <View style={styles.footerDivider} />
         <View style={styles.footerRow}>
           <Text style={styles.footerLabel}>Member since:</Text>
-          <Text style={styles.footerValue}>{MOCK_DATA.memberSince}</Text>
+          <Text style={styles.footerValue}>{userData.memberSince}</Text>
         </View>
       </View>
 
@@ -209,6 +333,69 @@ const styles = StyleSheet.create({
 container: {
     flex: 1,
   },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: COLORS.primary,
+  },
+  loggedOutCard: {
+    backgroundColor: COLORS.white,
+    padding: 24,
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  loggedOutEmoji: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  loggedOutTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  loggedOutText: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  primaryButton: {
+    backgroundColor: COLORS.accent,
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  primaryButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    backgroundColor: COLORS.statsBg,
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  secondaryButtonText: {
+    color: COLORS.accent,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
   scrollContent: {
     paddingBottom: 40,
   },

@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase"; // Tarkista polku oman projektisi mukaan
 import i18n from "@/lib/i18n/i18n";
 
-export default function SignupScreen({ navigation }: { navigation: any }) {
+export default function SignupScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,7 +38,7 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
         i18n.t("success") || "Onnistui",
         i18n.t("signupSuccessMsg") || "Tunnus luotu! Voit kirjautua sisään."
       );
-      navigation.goBack();
+      router.back();
     }
   };
 
@@ -74,7 +76,7 @@ export default function SignupScreen({ navigation }: { navigation: any }) {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => navigation.goBack()}
+        onPress={() => router.back()}
         style={styles.linkContainer}
       >
         <Text style={styles.linkText}>{i18n.t("hasAccountAlready")}</Text>

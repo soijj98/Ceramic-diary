@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { StyleSheet, Text, View, Alert, TextInput, TouchableOpacity } from "react-native";
-
+import { useRouter } from "expo-router";
 import { supabase } from "../../src/lib/supabase"; // Tarkista polku oman projektisi mukaan
 import i18n from "@/lib/i18n/i18n";
 
-export default function LoginScreen({ navigation }: { navigation: any }) {
+export default function LoginScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,8 +26,9 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 
     if (error) {
       Alert.alert(i18n.t("error"), error.message);
+    } else {
+      router.back();
     }
-    // Onnistuessaan Supabasen tilaa kuunteleva listener vie käyttäjän eteenpäin
   };
 
   return (
@@ -63,7 +65,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => navigation.navigate("Signup")}
+        onPress={() => router.push("/signup")}
         style={styles.linkContainer}
       >
         <Text style={styles.linkText}>{i18n.t("noAccountYet")}</Text>
