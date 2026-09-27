@@ -1,95 +1,116 @@
-# Keramiikkapäiväkirja
+# Ceramic Diary
 
-Studio-sovellus keramiikkatöiden seurantaan: kirjaudu sisään, luo
-töitä, lisää niihin vaiheita (muotoilu, kuivatus, poltot, lasitus)
-kuvineen ja teknisine tietoineen, ja kerää erillisiä ideoita
-myöhempää käyttöä varten.
+A cross-platform ceramic journaling application for documenting pottery projects from shaping to firing and glazing.
 
-## Ominaisuudet nyt
+The application allows users to create ceramic pieces, document individual work stages, record materials and firing information, and attach photos to each stage. The project is built with React Native, Expo, TypeScript and Supabase.
 
-- **Kirjautuminen**: tervetulonäkymä + kirjautuminen/rekisteröityminen
-  Supabase Authilla, istunto säilyy sovelluksen sulkemisen yli
-- **Koti**: tervehdys, pikatoiminnot (Uusi työ, Ideat), viimeisimmät työt
-- **Työt**: kaikkien töiden lista, suodatus tilan mukaan (Kaikki/
-  Aktiiviset/Valmiit/Luonnokset)
-- **Työn tarkastelu**: tila (luonnos → aktiivinen → valmis, vaihtuu
-  painamalla), kuvaus, vaiheiden aikajana
-- **Vaiheen lisäys**: kentät vaihtuvat vaihetyypin mukaan (uunilämpötila
-  poltoille, lasite lasitukselle, paino muotoilulle/kuivatukselle),
-  kuvien lisäys Supabase Storageen
-- **Ideat**: yksinkertainen ideataulu (nimi, muistiinpano, linkki)
-- **Profiili**: nimi, sähköposti, työmäärä-tilastot, uloskirjautuminen
-- Kaikki data on käyttäjäkohtaista (Row Level Security)
+## Features
 
-## Käyttöönotto
+* Create and manage ceramic pieces
+* Track the progress of a piece through different stages
+* Record notes, weights and clay information
+* Record kiln temperatures and firing programs
+* Record glaze and engobe information
+* Attach photos to individual work stages
+* User authentication with Supabase Auth
+* User-specific data access using Row Level Security (RLS)
+* Cloud storage for process photos
+* Responsive interface for web and mobile
 
-1. **Asenna riippuvuudet**
+## Tech Stack
 
-   ```bash
-   npm install
-   ```
+* **Frontend:** React Native, Expo, TypeScript
+* **Backend / Database:** Supabase, PostgreSQL
+* **Authentication:** Supabase Auth
+* **Storage:** Supabase Storage
+* **Security:** Row Level Security (RLS)
+* **Routing:** Expo Router
 
-2. **Aja tietokantaskeema** Supabasen SQL-editorissa: `supabase/schema.sql`.
-   Jos sinulla on aiempi versio skeemasta (esim. ilman `owner_id`-saraketta,
-   tai `sessions`-taulut), pudota vanhat taulut ensin — ohje skeeman alussa
-   kommenttina.
+## Project Structure
 
-3. **Ota sähköpostivahvistus pois päältä testauksen ajaksi** (valinnainen
-   mutta suositeltavaa): Supabase Dashboard → Authentication → Providers →
-   Email → "Confirm email" pois päältä, niin pääset kirjautumaan heti
-   rekisteröitymisen jälkeen ilman sähköpostin vahvistamista.
-
-4. **Ympäristömuuttujat**
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Täytä Supabase-projektisi URL ja anon-avain (Project Settings → API).
-
-5. **Käynnistä sovellus**
-
-   ```bash
-   npx expo start -c
-   ```
-
-## Projektirakenne
-
-```
+```text
 app/
-  (auth)/
-    login.tsx           Tervetulo + kirjautuminen
-    signup.tsx           Rekisteröityminen
-  (tabs)/
-    _layout.tsx           Tab-navigaattori: Koti, Työt, +, Ideat, Profiili
-    index.tsx              Koti-näkymä
-    works.tsx               Työt-lista + suodatus
-    ideas.tsx                Ideataulu
-    profile.tsx               Profiili + uloskirjautuminen
-    add.tsx                    Placeholder — "+"-välilehti ohjaa /piece/new:iin
-  piece/
-    new.tsx                Uuden työn lomake
-    [id]/
-      index.tsx             Työn tarkastelu + vaiheiden aikajana
-      add-step.tsx            Vaiheen lisäys + kuvat
-  _layout.tsx               Juuri: kirjautumistilan ohjaus (Stack)
+├── index.tsx
+├── piece/
+│   ├── new.tsx
+│   └── [id]/
+│       ├── index.tsx
+│       ├── add-step.tsx
+│       └── edit-step/
+│
 src/
-  components/                PieceCard, StepCard, StepTypeBadge, IdeaCard
-  constants/theme.ts           Värit, välit
-  context/AuthContext.tsx       Supabase-istunnon tila koko sovellukselle
-  lib/
-    supabase.ts                 Supabase-client + istunnon säilytys
-    data.ts                      Kaikki tietokantakutsut
-  types/index.ts                 Piece/Step/Idea-tyypit
-supabase/schema.sql              Taulut + RLS-policyt + storage-bucket
+├── components/
+├── constants/
+├── context/
+├── lib/
+│   ├── data.ts
+│   └── supabase.ts
+└── types/
+
+supabase/
+└── schema.sql
 ```
 
-## Seuraavaksi (ideoita jatkoon — ei vielä tässä versiossa)
+## Data Model
 
-- **Ryhmät/yhteisö**: jaetut työt, tiimit, seuraaminen — tietoisesti
-  rajattu pois tästä vaiheesta
-- Työn kansikuva ja kuvagalleria työn pääsivulla
-- Materiaalit- ja hinnoittelunäkymä (kustannuslaskuri per työ)
-- Ideataulun kuvatuki (nyt vain teksti + linkki)
-- Pinterest-integraatio ideoiden tuontiin
-- Profiilikuvan lataus
+The application uses a relational database with separate tables for:
+
+* **Pieces** – ceramic works and their basic information
+* **Steps** – individual stages in the making process
+* **Step Photos** – photos associated with individual stages
+* **Profiles** – user profile information
+* **Ideas** – saved ceramic project ideas
+
+User-specific access is controlled using Supabase Row Level Security policies.
+
+## Getting Started
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure Supabase
+
+Create a Supabase project and configure the required database tables, Row Level Security policies and storage bucket.
+
+### 3. Configure environment variables
+
+Create a `.env` file based on `.env.example`:
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### 4. Start the development server
+
+```bash
+npx expo start
+```
+
+The application can be run on web or through Expo Go on a mobile device.
+
+## Current Status
+
+The core application functionality is implemented and the project is actively being developed.
+
+The main focus has been on building the application architecture, database integration, authentication, user-specific data access and the ceramic work-stage tracking system.
+
+## Future Development
+
+Possible future improvements include:
+
+* Improved image upload and management
+* Ceramic material and glaze recipe integration
+* Statistics and weight/shrinkage visualizations
+* Offline support
+* More detailed piece management
+* Improved sharing and community features
+
+## Author
+
+**Saija Joronen**
+
+ICT Engineering student at HAMK, interested in software development, HealthTech, AI and IoT.
