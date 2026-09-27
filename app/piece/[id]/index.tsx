@@ -3,7 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Swipeable } from "react-native-gesture-handler";
 import { Piece, PieceStatus, PIECE_STATUS_LABELS, StepWithPhotos } from "@/types";
-import { getPiece, listStepsWithPhotos, updatePieceStatus } from "@/lib/data";
+import { deleteStep, getPiece, listStepsWithPhotos, updatePieceStatus } from "@/lib/data";
 import { StepCard } from "@/components/StepCard";
 import { colors, radius, spacing } from "@/constants/theme";
 

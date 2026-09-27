@@ -23,7 +23,15 @@ export const supabase = createClient(supabaseUrl ?? "", supabaseAnonKey ?? "", {
 
 export const STORAGE_BUCKET = "ceramics-diary";
 
-export function photoUrl(storagePath: string): string {
-  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
-  return data.publicUrl;
+export async function photoUrl(storagePath: string): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .createSignedUrl(storagePath, 60 * 60);
+
+  if (error) {
+    console.error("Kuvan URL:n luominen epäonnistui:", error);
+    return null;
+  }
+
+  return data.signedUrl;
 }

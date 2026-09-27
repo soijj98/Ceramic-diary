@@ -20,7 +20,7 @@ export default function AddStepScreen() {
   const [glazeMethod, setGlazeMethod] = useState("");
   const [photoCount, setPhotoCount] = useState(0);
 
-  const [localPhotos, setLocalPhotos] = useState<String[]>([])
+  const [localPhotos, setLocalPhotos] = useState<string[]>([])
   
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

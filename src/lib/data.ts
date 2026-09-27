@@ -76,37 +76,98 @@ export async function createStep(input: {
   return data;
 }
 
-export async function pickAndUploadStepPhoto(stepId: string, ownerId: string): Promise<StepPhoto | null> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) throw new Error("Kuvakirjaston käyttöoikeus puuttuu.");
+export async function deleteStep(stepId: string): Promise<void> {
+  // Haetaan ensin kuvat
+  const { data: photos, error: photosError } = await supabase
+    .from("step_photos")
+    .select("storage_path")
+    .eq("step_id", stepId);
 
+  if (photosError) throw photosError;
+
+  // Poistetaan kuvat Storagesta
+  if (photos && photos.length > 0) {
+    const paths = photos.map((photo) => photo.storage_path);
+
+    const { error: storageError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .remove(paths);
+
+    if (storageError) throw storageError;
+  }
+
+  // Poistetaan step_photos-rivit
+  const { error: photoRowsError } = await supabase
+    .from("step_photos")
+    .delete()
+    .eq("step_id", stepId);
+
+  if (photoRowsError) throw photoRowsError;
+
+  // Lopuksi poistetaan itse vaihe
+  const { error: stepError } = await supabase
+    .from("steps")
+    .delete()
+    .eq("id", stepId);
+
+  if (stepError) throw stepError;
+}
+
+export async function pickPhoto(): Promise<string | null> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
     quality: 0.8,
   });
-  if (result.canceled || result.assets.length === 0) return null;
 
-  const asset = result.assets[0];
-  const response = await fetch(asset.uri);
-  const arrayBuffer = await response.arrayBuffer();
-  const fileExt = asset.uri.split(".").pop() ?? "jpg";
-  // Storage policies require the path to start with the user's id.
+  if (result.canceled || result.assets.length === 0) {
+    return null;
+  }
+
+  return result.assets[0].uri;
+}
+
+export async function uploadStepPhoto(
+  stepId: string,
+  ownerId: string,
+  uri: string
+): Promise<StepPhoto> {
+  const response = await fetch(uri);
+
+  if (!response.ok) {
+    throw new Error(`Kuvan lukeminen epäonnistui: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+
+  const fileExt = uri.split(".").pop()?.split("?")[0] ?? "jpg";
   const storagePath = `${ownerId}/${stepId}/${Date.now()}.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage
     .from(STORAGE_BUCKET)
-    .upload(storagePath, arrayBuffer, { contentType: asset.mimeType ?? "image/jpeg" });
-  if (uploadError) throw uploadError;
+    .upload(storagePath, blob, {
+      contentType: blob.type || "image/jpeg",
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw uploadError;
+  }
 
   const { data, error } = await supabase
     .from("step_photos")
-    .insert({ step_id: stepId, storage_path: storagePath })
+    .insert({
+      step_id: stepId,
+      storage_path: storagePath,
+    })
     .select()
     .single();
-  if (error) throw error;
+
+  if (error) {
+    throw error;
+  }
+
   return data;
 }
-
 // ---- Ideas ----
 
 export async function listIdeas(): Promise<Idea[]> {
