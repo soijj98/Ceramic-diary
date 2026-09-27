@@ -3,21 +3,14 @@
     "name": "Keramiikkapäiväkirja",
     "slug": "ceramics-diary",
     "scheme": "ceramicsdiary",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
-    "splash": {
-      "backgroundColor": "#EEE7DB"
-    },
+    "splash": { "backgroundColor": "#F4EADA" },
     "assetBundlePatterns": ["**/*"],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.saija.ceramicsdiary"
-    },
-    "android": {
-      "package": "com.saija.ceramicsdiary"
-    },
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.saija.ceramicsdiary" },
+    "android": { "package": "com.saija.ceramicsdiary" },
     "plugins": ["expo-router"]
   }
 }

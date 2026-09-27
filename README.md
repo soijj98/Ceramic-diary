@@ -1,22 +1,25 @@
 # Keramiikkapäiväkirja
 
-Prosessipäiväkirja keramiikkatöille: lisää kappaleita, kirjaa vaihe
-vaiheelta mitä teit (muotoilu, kuivatus, poltot, lasitus/enkoopointi),
-liitä kuvia joka vaiheeseen, ja seuraa uunilämpötiloja, painoa ja
-käytettyjä lasitteita.
-
-Tämä on pohja jatkokehitykseen — perustoiminnot on rakennettu, mutta
-paljon on vielä avointa (ks. "Seuraavaksi" alla).
+Studio-sovellus keramiikkatöiden seurantaan: kirjaudu sisään, luo
+töitä, lisää niihin vaiheita (muotoilu, kuivatus, poltot, lasitus)
+kuvineen ja teknisine tietoineen, ja kerää erillisiä ideoita
+myöhempää käyttöä varten.
 
 ## Ominaisuudet nyt
 
-- Kappaleiden listaus ja luonti (nimi, savityyppi, alkupaino)
-- Kappaleen aikajana, joka näyttää kaikki vaiheet kronologisesti
-- "Lisää vaihe" -lomake, jossa näkyvät kentät vaihtuvat vaihetyypin
-  mukaan (uunilämpötila ja polttopohjelma poltoille, lasitteen nimi
-  ja levitystapa lasitukselle/enkoopoinnille, paino muotoilulle ja
-  kuivatukselle)
-- Kuvien lisäys Supabase Storageen jokaiseen vaiheeseen
+- **Kirjautuminen**: tervetulonäkymä + kirjautuminen/rekisteröityminen
+  Supabase Authilla, istunto säilyy sovelluksen sulkemisen yli
+- **Koti**: tervehdys, pikatoiminnot (Uusi työ, Ideat), viimeisimmät työt
+- **Työt**: kaikkien töiden lista, suodatus tilan mukaan (Kaikki/
+  Aktiiviset/Valmiit/Luonnokset)
+- **Työn tarkastelu**: tila (luonnos → aktiivinen → valmis, vaihtuu
+  painamalla), kuvaus, vaiheiden aikajana
+- **Vaiheen lisäys**: kentät vaihtuvat vaihetyypin mukaan (uunilämpötila
+  poltoille, lasite lasitukselle, paino muotoilulle/kuivatukselle),
+  kuvien lisäys Supabase Storageen
+- **Ideat**: yksinkertainen ideataulu (nimi, muistiinpano, linkki)
+- **Profiili**: nimi, sähköposti, työmäärä-tilastot, uloskirjautuminen
+- Kaikki data on käyttäjäkohtaista (Row Level Security)
 
 ## Käyttöönotto
 
@@ -26,14 +29,15 @@ paljon on vielä avointa (ks. "Seuraavaksi" alla).
    npm install
    ```
 
-2. **Luo Supabase-projekti** osoitteessa [supabase.com](https://supabase.com)
-   (ilmainen taso riittää tähän hyvin).
+2. **Aja tietokantaskeema** Supabasen SQL-editorissa: `supabase/schema.sql`.
+   Jos sinulla on aiempi versio skeemasta (esim. ilman `owner_id`-saraketta,
+   tai `sessions`-taulut), pudota vanhat taulut ensin — ohje skeeman alussa
+   kommenttina.
 
-3. **Aja tietokantaskeema**
-
-   Avaa Supabasen SQL-editori ja aja `supabase/schema.sql`. Se luo
-   taulut (`pieces`, `steps`, `step_photos`) ja `ceramics-diary`
-   -storage-bucketin kuville.
+3. **Ota sähköpostivahvistus pois päältä testauksen ajaksi** (valinnainen
+   mutta suositeltavaa): Supabase Dashboard → Authentication → Providers →
+   Email → "Confirm email" pois päältä, niin pääset kirjautumaan heti
+   rekisteröitymisen jälkeen ilman sähköpostin vahvistamista.
 
 4. **Ympäristömuuttujat**
 
@@ -41,46 +45,51 @@ paljon on vielä avointa (ks. "Seuraavaksi" alla).
    cp .env.example .env
    ```
 
-   Täytä `.env`-tiedostoon Supabase-projektisi URL ja anon-avain
-   (löytyvät Supabasen dashboardista: Project Settings → API).
+   Täytä Supabase-projektisi URL ja anon-avain (Project Settings → API).
 
 5. **Käynnistä sovellus**
 
    ```bash
-   npx expo start
+   npx expo start -c
    ```
-
-   Skannaa QR-koodi Expo Go -sovelluksella puhelimessa, tai paina `i`
-   / `a` avataksesi iOS-simulaattorin / Android-emulaattorin.
 
 ## Projektirakenne
 
 ```
-app/                     Expo Router -näytöt (tiedostopohjainen reititys)
-  index.tsx               Kappalelista
-  piece/new.tsx           Uuden kappaleen lomake
-  piece/[id]/index.tsx    Kappaleen aikajana
-  piece/[id]/add-step.tsx Vaiheen lisäyslomake + kuvat
+app/
+  (auth)/
+    login.tsx           Tervetulo + kirjautuminen
+    signup.tsx           Rekisteröityminen
+  (tabs)/
+    _layout.tsx           Tab-navigaattori: Koti, Työt, +, Ideat, Profiili
+    index.tsx              Koti-näkymä
+    works.tsx               Työt-lista + suodatus
+    ideas.tsx                Ideataulu
+    profile.tsx               Profiili + uloskirjautuminen
+    add.tsx                    Placeholder — "+"-välilehti ohjaa /piece/new:iin
+  piece/
+    new.tsx                Uuden työn lomake
+    [id]/
+      index.tsx             Työn tarkastelu + vaiheiden aikajana
+      add-step.tsx            Vaiheen lisäys + kuvat
+  _layout.tsx               Juuri: kirjautumistilan ohjaus (Stack)
 src/
-  components/             PieceCard, StepCard, StepTypeBadge
-  constants/theme.ts      Värit, välit, vaihetyyppien tunnusvärit
+  components/                PieceCard, StepCard, StepTypeBadge, IdeaCard
+  constants/theme.ts           Värit, välit
+  context/AuthContext.tsx       Supabase-istunnon tila koko sovellukselle
   lib/
-    supabase.ts           Supabase-clientin alustus
-    data.ts                Kaikki tietokantakutsut yhdessä paikassa
-  types/index.ts          Piece/Step/StepPhoto-tyypit ja vaihetyypit
-supabase/schema.sql       Tietokantaskeema + storage-bucket + policyt
+    supabase.ts                 Supabase-client + istunnon säilytys
+    data.ts                      Kaikki tietokantakutsut
+  types/index.ts                 Piece/Step/Idea-tyypit
+supabase/schema.sql              Taulut + RLS-policyt + storage-bucket
 ```
 
-## Seuraavaksi (ideoita jatkoon)
+## Seuraavaksi (ideoita jatkoon — ei vielä tässä versiossa)
 
-- Kirjautuminen (Supabase Auth), jotta jokainen käyttäjä näkee vain
-  omat kappaleensa — nyt kaikki data on julkisesti luettavissa/
-  kirjoitettavissa RLS-policyjen kautta, mikä sopii yhden käyttäjän
-  portfoliodemoon muttei tuotantoon
-- Kappaleen muokkaus ja poisto
-- Vaiheiden muokkaus/poisto ja kuvien poisto
-- Tagit/kategoriat kappaleille (esim. "koru", "astia", "kokeilu")
-- [[glaze-app]]-projektin lasitereseptien linkitys suoraan
-  lasitusvaiheeseen, jos resepti on jo tallennettu sinne
-- Painon/kutistuman kehityksen visualisointi kaaviona ajan yli
-- Offline-tuki (esim. paikallinen välimuisti ennen synkronointia)
+- **Ryhmät/yhteisö**: jaetut työt, tiimit, seuraaminen — tietoisesti
+  rajattu pois tästä vaiheesta
+- Työn kansikuva ja kuvagalleria työn pääsivulla
+- Materiaalit- ja hinnoittelunäkymä (kustannuslaskuri per työ)
+- Ideataulun kuvatuki (nyt vain teksti + linkki)
+- Pinterest-integraatio ideoiden tuontiin
+- Profiilikuvan lataus

@@ -1,30 +1,19 @@
-// Palette matched to the "Clay Book" mockup: warm cream paper with
-// terracotta/brown accents — the material tones of a studio journal
-// rather than a generic app palette.
+// Warm cream / terracotta studio-journal palette, matched to the
+// "Keramiikkapäiväkirja" mockups.
 export const colors = {
-  background: "#F4EADA", // warm cream paper
-  surface: "#FBF6EC", // card / input background, slightly lighter
-  surfaceMuted: "#EFE1C8", // inactive pill background
-  text: "#2E2115", // near-black warm brown for headings/body
-  textMuted: "#93816C", // muted labels, dates, secondary text
+  background: "#ffffff",
+  surface: "#FBF6EC",
+  surfaceMuted: "#EFE1C8",
+  text: "#2E2115",
+  textMuted: "#93816C",
   border: "#E3D3B6",
-  accent: "#8A5A34", // primary brown — buttons, active states
-  accentDark: "#6B4226", // active "All" pill / save button
-  accentSoft: "#F0DFC4", // pill fill for selected category tag on cards
+  accent: "#8A5A34",
+  accentDark: "#6B4226",
+  accentSoft: "#F0DFC4",
+  success: "#4C7A4C",
   danger: "#A33B2E",
+  heroDark: "#2B2118", // dark hero background on the welcome screen
 };
- 
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-};
- 
-export const radius = {
-  sm: 8,
-  md: 14,
-  lg: 24,
-  pill: 999,
-};
+
+export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
+export const radius = { sm: 8, md: 14, lg: 24, pill: 999 };

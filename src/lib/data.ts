@@ -1,87 +1,84 @@
 import * as ImagePicker from "expo-image-picker";
 import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
-import { Category, Mood, Session, SessionPhoto, SessionWithPhotos } from "@/types";
+import { Idea, Piece, PieceStatus, Step, StepPhoto, StepType, StepWithPhotos } from "@/types";
 
-export async function listSessions(category?: Category): Promise<Session[]> {
-  let query = supabase
-    .from("sessions")
-    .select("*")
-    .order("created_at", { ascending: false });
+// ---- Pieces ----
 
-  if (category) {
-    query = query.eq("category", category);
-  }
-
+export async function listPieces(status?: PieceStatus): Promise<Piece[]> {
+  let query = supabase.from("pieces").select("*").order("created_at", { ascending: false });
+  if (status) query = query.eq("status", status);
   const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }
 
-export async function listSessionPhotos(
-  sessionIds: string[]
-): Promise<SessionPhoto[]> {
-  if (sessionIds.length === 0) return [];
-  const { data, error } = await supabase
-    .from("session_photos")
-    .select("*")
-    .in("session_id", sessionIds);
+export async function getPiece(id: string): Promise<Piece> {
+  const { data, error } = await supabase.from("pieces").select("*").eq("id", id).single();
   if (error) throw error;
-  return data ?? [];
+  return data;
 }
 
-// Convenience helper for screens that want sessions + their photos
-// in one call, e.g. a detail view.
-export async function listSessionsWithPhotos(
-  category?: Category
-): Promise<SessionWithPhotos[]> {
-  const sessions = await listSessions(category);
-  const photos = await listSessionPhotos(sessions.map((s) => s.id));
-  return sessions.map((session) => ({
-    ...session,
-    photos: photos.filter((p) => p.session_id === session.id),
-  }));
-}
-
-export async function getSession(id: string): Promise<SessionWithPhotos> {
-  const { data, error } = await supabase
-    .from("sessions")
-    .select("*")
-    .eq("id", id)
-    .single();
-  if (error) throw error;
-  const photos = await listSessionPhotos([id]);
-  return { ...data, photos };
-}
-
-export async function createSession(input: {
+export async function createPiece(input: {
   title: string;
-  category: Category;
-  clay_body?: string;
-  technique?: string;
-  firing_temp?: string;
-  glaze?: string;
-  mood?: Mood;
-  notes?: string;
-}): Promise<Session> {
+  description?: string;
+  clay_type?: string;
+  start_weight_g?: number;
+}): Promise<Piece> {
   const { data, error } = await supabase
-    .from("sessions")
-    .insert(input)
+    .from("pieces")
+    .insert({ ...input, status: "luonnos" })
     .select()
     .single();
   if (error) throw error;
   return data;
 }
 
-// Lets the user pick a photo from their library and uploads it to
-// Supabase Storage under the given session, recording it in
-// session_photos.
-export async function pickAndUploadSessionPhoto(
-  sessionId: string
-): Promise<SessionPhoto | null> {
+export async function updatePieceStatus(id: string, status: PieceStatus): Promise<void> {
+  const { error } = await supabase.from("pieces").update({ status }).eq("id", id);
+  if (error) throw error;
+}
+
+// ---- Steps ----
+
+export async function listStepsWithPhotos(pieceId: string): Promise<StepWithPhotos[]> {
+  const { data: steps, error } = await supabase
+    .from("steps")
+    .select("*")
+    .eq("piece_id", pieceId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  if (!steps || steps.length === 0) return [];
+
+  const { data: photos, error: photosError } = await supabase
+    .from("step_photos")
+    .select("*")
+    .in("step_id", steps.map((s) => s.id));
+  if (photosError) throw photosError;
+
+  return steps.map((step) => ({
+    ...step,
+    photos: (photos ?? []).filter((p: StepPhoto) => p.step_id === step.id),
+  }));
+}
+
+export async function createStep(input: {
+  piece_id: string;
+  step_type: StepType;
+  note?: string;
+  weight_g?: number;
+  kiln_temp_c?: number;
+  firing_program?: string;
+  glaze_name?: string;
+  glaze_application_method?: string;
+}): Promise<Step> {
+  const { data, error } = await supabase.from("steps").insert(input).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function pickAndUploadStepPhoto(stepId: string, ownerId: string): Promise<StepPhoto | null> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    throw new Error("Kuvakirjaston käyttöoikeus puuttuu.");
-  }
+  if (!permission.granted) throw new Error("Kuvakirjaston käyttöoikeus puuttuu.");
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -93,20 +90,40 @@ export async function pickAndUploadSessionPhoto(
   const response = await fetch(asset.uri);
   const arrayBuffer = await response.arrayBuffer();
   const fileExt = asset.uri.split(".").pop() ?? "jpg";
-  const storagePath = `${sessionId}/${Date.now()}.${fileExt}`;
+  // Storage policies require the path to start with the user's id.
+  const storagePath = `${ownerId}/${stepId}/${Date.now()}.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage
     .from(STORAGE_BUCKET)
-    .upload(storagePath, arrayBuffer, {
-      contentType: asset.mimeType ?? "image/jpeg",
-    });
+    .upload(storagePath, arrayBuffer, { contentType: asset.mimeType ?? "image/jpeg" });
   if (uploadError) throw uploadError;
 
   const { data, error } = await supabase
-    .from("session_photos")
-    .insert({ session_id: sessionId, storage_path: storagePath })
+    .from("step_photos")
+    .insert({ step_id: stepId, storage_path: storagePath })
     .select()
     .single();
+  if (error) throw error;
+  return data;
+}
+
+// ---- Ideas ----
+
+export async function listIdeas(): Promise<Idea[]> {
+  const { data, error } = await supabase
+    .from("ideas")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createIdea(input: {
+  title: string;
+  note?: string;
+  link?: string;
+}): Promise<Idea> {
+  const { data, error } = await supabase.from("ideas").insert(input).select().single();
   if (error) throw error;
   return data;
 }

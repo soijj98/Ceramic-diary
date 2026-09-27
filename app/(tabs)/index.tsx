@@ -1,30 +1,24 @@
-import { useCallback, useMemo, useState } from "react";
-import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useState } from "react";
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Category, Session } from "@/types";
-import { listSessions } from "@/lib/data";
-import { SessionCard } from "@/components/SessionCard";
-import { CategoryFilterBar } from "@/components/CategoryFilterBar";
+import { Ionicons } from "@expo/vector-icons";
+import { Piece } from "@/types";
+import { listPieces } from "@/lib/data";
+import { useAuth } from "@/context/AuthContext";
+import { PieceCard } from "@/components/PieceCard";
 import { colors, radius, spacing } from "@/constants/theme";
 
-export default function ClayBookScreen() {
+export default function HomeScreen() {
   const router = useRouter();
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [filter, setFilter] = useState<Category | "all">("all");
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [pieces, setPieces] = useState<Piece[]>([]);
+  const firstName = (user?.user_metadata?.full_name as string | undefined)?.split(" ")[0] ?? "";
 
   const load = useCallback(async () => {
     try {
-      setErrorMsg(null);
-      setSessions(await listSessions());
+      setPieces(await listPieces());
     } catch (err) {
-      setErrorMsg(
-        "Merkintöjen lataus epäonnistui. Tarkista Supabase-asetukset .env-tiedostossa."
-      );
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -34,117 +28,130 @@ export default function ClayBookScreen() {
     }, [load])
   );
 
-  const visibleSessions = useMemo(
-    () => (filter === "all" ? sessions : sessions.filter((s) => s.category === filter)),
-    [sessions, filter]
-  );
-
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.eyebrow}>YOUR STUDIO JOURNAL</Text>
-          <Text style={styles.title}>Clay Book</Text>
-        </View>
+        <Text style={styles.greeting}>Hei{firstName ? ` ${firstName}` : ""}! 👋</Text>
         <View style={styles.avatar} />
       </View>
 
-      <CategoryFilterBar value={filter} onChange={setFilter} />
+      <View style={styles.searchBar}>
+        <Ionicons name="search" size={16} color={colors.textMuted} />
+        <Text style={styles.searchPlaceholder}>Hae töitä, ideoita…</Text>
+      </View>
 
-      {errorMsg && <Text style={styles.error}>{errorMsg}</Text>}
+      <View style={styles.quickActions}>
+        <QuickAction
+          icon="add-circle-outline"
+          label="Uusi työ"
+          onPress={() => router.push("/piece/new")}
+        />
+        <QuickAction
+          icon="bulb-outline"
+          label="Ideat"
+          onPress={() => router.push("/(tabs)/ideas")}
+        />
+      </View>
 
-      <FlatList
-        data={visibleSessions}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <SessionCard
-            session={item}
-            onPress={() => router.push(`/session/${item.id}`)}
-          />
-        )}
-        ListEmptyComponent={
-          !loading ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>🏺</Text>
-              <Text style={styles.emptyText}>No notes in this category yet.</Text>
-            </View>
-          ) : null
-        }
-      />
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Viimeisimmät työt</Text>
+        <Pressable onPress={() => router.push("/(tabs)/works")}>
+          <Text style={styles.sectionLink}>Näytä kaikki</Text>
+        </Pressable>
+      </View>
 
-      <Pressable style={styles.fab} onPress={() => router.push("/session/new")}>
-        <Text style={styles.fabText}>+ New Session Note</Text>
-      </Pressable>
-    </View>
+      {pieces.length === 0 ? (
+        <Text style={styles.empty}>
+          Ei vielä yhtään työtä. Aloita painamalla "Uusi työ".
+        </Text>
+      ) : (
+        <FlatList
+          data={pieces.slice(0, 5)}
+          keyExtractor={(item) => item.id}
+          scrollEnabled={false}
+          renderItem={({ item }) => (
+            <PieceCard piece={item} onPress={() => router.push(`/piece/${item.id}`)} />
+          )}
+        />
+      )}
+    </ScrollView>
+  );
+}
+
+function QuickAction({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.quickAction} onPress={onPress}>
+      <View style={styles.quickActionIcon}>
+        <Ionicons name={icon} size={22} color={colors.accentDark} />
+      </View>
+      <Text style={styles.quickActionLabel}>{label}</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    padding: spacing.md,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.md, paddingBottom: spacing.xl },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.xs,
   },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    color: colors.textMuted,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: colors.text,
-    marginTop: 2,
-  },
+  greeting: { fontSize: 24, fontWeight: "800", color: colors.text },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 2,
     borderColor: colors.border,
   },
-  list: {
-    paddingTop: spacing.sm,
-    paddingBottom: 96,
-  },
-  empty: {
-    marginTop: spacing.xl * 2,
+  searchBar: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    marginTop: spacing.md,
   },
-  emptyEmoji: {
-    fontSize: 32,
+  searchPlaceholder: { color: colors.textMuted, fontSize: 14 },
+  quickActions: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginTop: spacing.lg,
+  },
+  quickAction: { alignItems: "center", gap: spacing.xs },
+  quickActionIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  quickActionLabel: { fontSize: 12, color: colors.textMuted },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: spacing.xl,
     marginBottom: spacing.sm,
   },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 14,
-  },
-  error: {
-    color: colors.danger,
-    marginBottom: spacing.sm,
-  },
-  fab: {
-    position: "absolute",
-    bottom: spacing.lg,
-    right: spacing.lg,
-    left: spacing.lg,
-    backgroundColor: colors.accent,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-  },
-  fabText: {
-    color: "#FFF8EE",
-    fontWeight: "700",
-    fontSize: 16,
-  },
+  sectionTitle: { fontSize: 17, fontWeight: "700", color: colors.text },
+  sectionLink: { fontSize: 13, color: colors.accent, fontWeight: "600" },
+  empty: { color: colors.textMuted, fontSize: 14, marginTop: spacing.sm },
 });

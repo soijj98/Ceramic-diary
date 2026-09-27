@@ -1,4 +1,5 @@
 import "react-native-url-polyfill/auto";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -11,17 +12,18 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(
-  supabaseUrl ?? "",
-  supabaseAnonKey ?? ""
-);
+export const supabase = createClient(supabaseUrl ?? "", supabaseAnonKey ?? "", {
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
 
 export const STORAGE_BUCKET = "ceramics-diary";
 
-// Turns a storage path saved in the DB into a displayable URL.
 export function photoUrl(storagePath: string): string {
-  const { data } = supabase.storage
-    .from(STORAGE_BUCKET)
-    .getPublicUrl(storagePath);
+  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
   return data.publicUrl;
 }
