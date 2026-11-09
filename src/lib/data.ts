@@ -1,4 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from 'expo-image-manipulator'
 import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
 import { Idea, Piece, PieceStatus, Step, StepPhoto, StepType, StepWithPhotos } from "@/types";
 
@@ -116,58 +117,79 @@ export async function deleteStep(stepId: string): Promise<void> {
 export async function pickPhoto(): Promise<string | null> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    quality: 0.8,
+    quality: 0.7,
   });
 
-  if (result.canceled || result.assets.length === 0) {
+  if (!result.canceled) {
+    const originalUri = result.assets[0].uri;
+
+    const manipResult = await ImageManipulator.manipulateAsync(
+      originalUri,
+      [{ resize: { width: 1080 } }],
+      {
+        compress: 0.7,
+        format: ImageManipulator.SaveFormat.JPEG 
+      }
+    );
+
+
+    return manipResult.uri;
+  }
+
     return null;
   }
 
-  return result.assets[0].uri;
-}
 
-export async function uploadStepPhoto(
-  stepId: string,
-  ownerId: string,
-  uri: string
+export async function uploadStepPhoto(stepId: string, ownerId: string, uri: string
+
 ): Promise<StepPhoto> {
-  const response = await fetch(uri);
+  
+    let fileExt = 'jpg';
+    if (uri.startsWith('data:image')) {
 
-  if (!response.ok) {
-    throw new Error(`Kuvan lukeminen epäonnistui: ${response.status}`);
+      //MIME (Multipurpose Internet Mail Extensions)
+      const mimeType = uri.split(';')[0].split(':')[1];
+      fileExt = mimeType.split('/')[1] || 'jpg';
+    } else {
+      fileExt = uri.split('.').pop()?.split("?")[0] ?? 'jpg';
+    }
+
+    const storagePath = `${ownerId}/${stepId}/${Date.now()}.${fileExt}`; 
+
+    const response = await fetch(uri);
+    if (!response.ok) {
+      throw new Error(`Kuvan lukeminen epäonnistui: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+
+    const { error: uploadError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(storagePath, blob, {
+        contentType: blob.type || `image/${fileExt}`,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data, error } = await supabase
+      .from("step_photos")
+      .insert({
+        step_id: stepId,
+        storage_path: storagePath,
+      })
+      .select()
+      .single();
+  
+    if (error) {
+      throw error;
+    }
+
+    return data;
   }
 
-  const blob = await response.blob();
-
-  const fileExt = uri.split(".").pop()?.split("?")[0] ?? "jpg";
-  const storagePath = `${ownerId}/${stepId}/${Date.now()}.${fileExt}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .upload(storagePath, blob, {
-      contentType: blob.type || "image/jpeg",
-      upsert: false,
-    });
-
-  if (uploadError) {
-    throw uploadError;
-  }
-
-  const { data, error } = await supabase
-    .from("step_photos")
-    .insert({
-      step_id: stepId,
-      storage_path: storagePath,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
-}
 // ---- Ideas ----
 
 export async function listIdeas(): Promise<Idea[]> {

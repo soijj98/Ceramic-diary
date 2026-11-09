@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ALL_STEP_TYPES, StepType, STEP_TYPE_FIELDS, STEP_TYPE_LABELS } from "@/types";
 import { createStep, pickPhoto, uploadStepPhoto } from "@/lib/data";
@@ -10,6 +10,14 @@ export default function AddStepScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+
+  const goBackSafely = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(`/piece/$[id]`);
+    }
+  }
 
   const [stepType, setStepType] = useState<StepType>("muotoilu");
   const [note, setNote] = useState("");
@@ -24,6 +32,7 @@ export default function AddStepScreen() {
   
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loadingText, setLoadingText ] = useState("Tallennetaan...");
   const [pendingStepId, setPendingStepId] = useState<string | null>(null);
 
   const fields = STEP_TYPE_FIELDS[stepType];
@@ -33,6 +42,7 @@ export default function AddStepScreen() {
     setSaving(true);
     setErrorMsg(null);
     try {
+      setLoadingText("Tallennetaan vaihetta...");
       const step = await createStep({
         piece_id: id,
         step_type: stepType,
@@ -45,12 +55,15 @@ export default function AddStepScreen() {
       });
 
       if (localPhotos.length > 0) {
-        await Promise.all(
-          localPhotos.map((uri) => uploadStepPhoto(step.id, user.id, uri))
-        );
+        let uploaded = 0;
+        for (const uri of localPhotos) {
+          setLoadingText(`Ladataan kuvia (${uploaded + 1}/${localPhotos.length})...`);
+          await uploadStepPhoto(step.id, user.id, uri);
+          uploaded++;
+        }
       }
 
-      router.back()
+      goBackSafely();
 
       //setPendingStepId(step.id);
     } catch (err) {
@@ -75,9 +88,23 @@ export default function AddStepScreen() {
     }
   }
 
+  const movePhoto = (index: number, direction: 'left' | 'right') => {
+    const newPhotos = [...localPhotos];
+    if (direction === 'left' && index > 0) {
+      [newPhotos[index -1], newPhotos[index]] = [newPhotos[index], newPhotos[index - 1]];
+    } else if (direction === 'right' && index < newPhotos.length - 1) {
+      [newPhotos[index + 1], newPhotos[index]] = [newPhotos[index], newPhotos[index + 1]];
+    }
+    setLocalPhotos(newPhotos);
+  };
+
+  const removePhoto = (index: number) => {
+    setLocalPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Pressable onPress={() => router.back()} hitSlop={8}>
+      <Pressable onPress={goBackSafely} hitSlop={8}>
         <Text style={styles.back}>← Takaisin</Text>
       </Pressable>
       <Text style={styles.pageTitle}>Lisää vaihe</Text>
@@ -100,6 +127,38 @@ export default function AddStepScreen() {
           })}
         </View>
 
+        <Text style={styles.label}> KUVAT (Ensimmäinen on kansikuva)</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryContainer}>
+          <Pressable style={styles.addPhotoBox} onPress={handleAddPhoto}>
+            <Text style={styles.addPhotosPlus}>+</Text>
+          </Pressable>
+
+          {localPhotos.map((uri, index) => (
+            <View key={uri + index} style={styles.imageWrapper}>
+              <Image source={{ uri }} style={styles.thumbnail} />
+
+              <Pressable style={styles.deleteBadge} onPress={() => removePhoto(index)}>
+                  <Text style={styles.badgeText}>X</Text>
+              </Pressable>
+
+              <View style={styles.moveArrows}>
+                {index > 0 ? (
+                  <Pressable style={styles.arrowBtn} onPress={() => movePhoto(index, 'left')}>
+                    <Text style={styles.arrowText}>--</Text>
+                  </Pressable>
+                  ) : <View style={styles.arrowBtnEmpty} />}
+
+                  {index < localPhotos.length - 1 ? (
+                    <Pressable style={styles.arrowBtn} onPress={() => movePhoto(index, 'right')}>
+                      <Text style={styles.arrowText}>oikea</Text>
+                    </Pressable>
+                  ) : <View style={styles.arrowBtnEmpty} />}
+                
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+        
         <Text style={styles.label}>MUISTIINPANO</Text>
         <TextInput
           style={[styles.input, styles.multiline]}
@@ -214,6 +273,50 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.accentDark, borderColor: colors.accentDark },
   chipText: { fontSize: 13, fontWeight: "600", color: colors.text },
   chipTextActive: { color: "#FFF8EE" },
+  galleryContainer: { alignItems: "center", gap: spacing.sm },
+  addPhotoBox: {
+    width: 88,
+    height: 88,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addPhotosPlus: { fontSize: 30, color: colors.accent, fontWeight: "300" },
+  imageWrapper: { position: "relative" },
+  thumbnail: { width: 88, height: 88, borderRadius: radius.sm },
+  deleteBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.danger,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: { color: "white", fontSize: 12, fontWeight: "700" },
+  moveArrows: {
+    position: "absolute",
+    left: 4,
+    right: 4,
+    bottom: 4,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  arrowBtn: {
+    minWidth: 28,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
+    alignItems: "center",
+  },
+  arrowBtnEmpty: { minWidth: 28 },
+  arrowText: { color: "white", fontSize: 10, fontWeight: "bold" },
   error: { color: colors.danger, marginTop: spacing.md },
   button: {
     backgroundColor: colors.accentDark,

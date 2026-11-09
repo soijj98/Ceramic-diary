@@ -59,20 +59,11 @@ export function StepCard({ step }: { step: StepWithPhotos }) {
         <Text style={styles.details}>{details.join(" · ")}</Text>
       )}
 
-      {step.photos.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.photoRow}
-        >
-          {step.photos.map((photo) => (
-            <StepPhotoImage
-              key={photo.id}
-              storagePath={photo.storage_path}
-            />
-          ))}
-        </ScrollView>
-      )}
+     {step.photos.length > 0 && (
+      <View style={styles.photoRow}>
+        <StepPhotoImage storagePath={step.photos[0].storage_path} />
+      </View> 
+    )}
     </View>
   );
 }
