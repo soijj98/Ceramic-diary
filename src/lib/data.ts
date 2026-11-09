@@ -39,6 +39,55 @@ export async function updatePieceStatus(id: string, status: PieceStatus): Promis
   if (error) throw error;
 }
 
+export async function updatePiece(
+  pieceId: string,
+  input: Partial<
+    Pick<
+      Piece,
+      "title" | "description" | "clay_type" | "start_weight_g"
+    >
+  >
+): Promise<Piece> {
+  const { data, error } = await supabase
+    .from("pieces")
+    .update(input)
+    .eq("id", pieceId)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data as Piece;
+}
+
+export async function getLatestPiecePhotoPath(
+  pieceId: string
+): Promise<string | null> {
+  const { data: steps, error: stepsError } = await supabase
+    .from("steps")
+    .select("id")
+    .eq("piece_id", pieceId);
+
+  if (stepsError) throw stepsError;
+
+  if (!steps || steps.length === 0) {
+    return null;
+  }
+
+  const stepIds = steps.map((step) => step.id);
+
+  const { data: photos, error: photosError } = await supabase
+    .from("step_photos")
+    .select("storage_path")
+    .in("step_id", stepIds)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (photosError) throw photosError;
+
+  return photos?.[0]?.storage_path ?? null;
+}
+
 // ---- Steps ----
 
 export async function listStepsWithPhotos(pieceId: string): Promise<StepWithPhotos[]> {

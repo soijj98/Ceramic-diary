@@ -106,6 +106,13 @@ export default function PieceDetailScreen() {
           <View style={styles.headerRow}>
             <Text style={styles.title}>{piece.title}</Text>
 
+            <Pressable 
+              style={styles.editPieceButton}
+              onPress={() => router.push(`/piece/${piece.id}/edit`)}
+              >
+              <Text style={styles.editPieceText}>Muokkaa</Text>
+            </Pressable>
+
             <Pressable
               style={styles.statusPill}
               onPress={cycleStatus}
@@ -217,6 +224,19 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginRight: spacing.sm,
   },
+  editPieceButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    marginRight: spacing.sm,
+  },
+  editPieceText: {
+    color: colors.accent,
+    fontSize: 12,
+    fontWeight: "700",
+  },
   statusPill: {
     backgroundColor: colors.accentSoft,
     borderRadius: radius.pill,
@@ -268,7 +288,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   confirmOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "center",
     padding: spacing.lg,
