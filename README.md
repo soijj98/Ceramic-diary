@@ -90,6 +90,14 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 npx expo start
 ```
 
+
+## 
+update 
+
+```bash
+npm run check
+```
+
 The application can be run on web or through Expo Go on a mobile device.
 
 ## Current Status
