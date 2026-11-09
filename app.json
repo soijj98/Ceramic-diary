@@ -6,11 +6,22 @@
     "version": "0.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "icon": "./assets/icon.png",
-    "splash": { "backgroundColor": "#F4EADA" },
-    "assetBundlePatterns": ["**/*"],
-    "ios": { "supportsTablet": true, "bundleIdentifier": "com.saija.ceramicsdiary" },
-    "android": { "package": "com.saija.ceramicsdiary" },
-    "plugins": ["expo-router"]
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.saija.ceramicsdiary"
+    },
+    "android": {
+      "package": "com.saija.ceramicsdiary"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F4EADA"
+        }
+      ],
+      "expo-status-bar"
+    ]
   }
 }

@@ -15,7 +15,7 @@ export default function AddStepScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace(`/piece/$[id]`);
+      router.replace(`/piece/${id}`);
     }
   }
 

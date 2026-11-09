@@ -190,6 +190,64 @@ export async function uploadStepPhoto(stepId: string, ownerId: string, uri: stri
     return data;
   }
 
+export async function getStepWithPhotos(
+  stepId: string
+): Promise<StepWithPhotos> {
+  const { data: step, error: stepError } = await supabase
+    .from("steps")
+    .select("*")
+    .eq("id", stepId)
+    .single();
+
+    if (stepError) throw stepError;
+
+    const { data: photos, error: photosError } = await supabase
+      .from("step_photos")
+      .select("*")
+      .eq("step_id", stepId)
+      .order("created_at", { ascending: true });
+
+      if (photosError) throw photosError;
+
+      return {
+        ...step,
+        photos: photos ?? [],
+      };
+}
+
+export async function updateStep(
+  stepId: string,
+  input: Partial<Omit<Step, "id" | "piece_id" | "created_at">>
+): Promise<Step> {
+  const { data, error } = await supabase
+    .from("steps")
+    .update(input)
+    .eq("id", stepId)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+export async function deleteStepPhoto(photo: StepPhoto) {
+  const { error: storageError } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .remove([photo.storage_path]);
+
+  if (storageError) throw storageError;
+
+  const { error: dbError } = await supabase
+    .from("step_photos")
+    .delete()
+    .eq("id", photo.id);
+
+  if (dbError) throw dbError;
+}
+
+
+
 // ---- Ideas ----
 
 export async function listIdeas(): Promise<Idea[]> {
