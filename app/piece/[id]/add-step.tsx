@@ -127,7 +127,7 @@ export default function AddStepScreen() {
           })}
         </View>
 
-        <Text style={styles.label}> KUVAT (Ensimmäinen on kansikuva)</Text>
+        <Text style={styles.label}> KUVAT </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryContainer}>
           <Pressable style={styles.addPhotoBox} onPress={handleAddPhoto}>
             <Text style={styles.addPhotosPlus}>+</Text>
