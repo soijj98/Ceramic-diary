@@ -226,12 +226,12 @@ export default function AddStepScreen() {
           </>
         )}
 
-        <Text style={styles.label}>KUVAT</Text>
+        {/* <Text style={styles.label}>KUVAT</Text>
         <Pressable style={styles.secondaryButton} onPress={handleAddPhoto}>
           <Text style={styles.secondaryButtonText}>
             {localPhotos.length > 0 ? `+ Lisää kuva (${localPhotos.length} valittu)` : "+ Lisää kuva" }
           </Text>
-        </Pressable>
+        </Pressable> */}
 
         {errorMsg && <Text style={styles.error}>{errorMsg}</Text>}
       
