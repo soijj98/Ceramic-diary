@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Keramiikkapäiväkirja",
-    "slug": "ceramics-diary",
+    "name": "Klayria",
+    "slug": "Klayria",
     "scheme": "ceramicsdiary",
-    "version": "0.2.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -11,7 +11,8 @@
       "bundleIdentifier": "com.saija.ceramicsdiary"
     },
     "android": {
-      "package": "com.saija.ceramicsdiary"
+      "package": "com.klayria.app",
+      "versionCode": 1
     },
     "plugins": [
       "expo-router",
