@@ -1,14 +1,14 @@
 {
   "expo": {
     "name": "Klayria",
-    "slug": "Klayria",
-    "scheme": "ceramicsdiary",
+    "slug": "klayria",
+    "scheme": "klayria",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.saija.ceramicsdiary"
+      "bundleIdentifier": "com.saija.klayria"
     },
     "android": {
       "package": "com.klayria.app",
@@ -23,6 +23,12 @@
         }
       ],
       "expo-status-bar"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "38756392-450e-4b2e-aff6-d4cf5f89d356"
+      }
+    }
   }
 }
