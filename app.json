@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Klayria",
@@ -5,6 +6,7 @@
     "scheme": "klayria",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/Klayria.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
@@ -19,6 +21,9 @@
       [
         "expo-splash-screen",
         {
+          "image": "./assets/Klayria.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
           "backgroundColor": "#F4EADA"
         }
       ],
